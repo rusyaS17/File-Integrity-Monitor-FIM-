@@ -1,0 +1,28 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity monitored_files {
+  * id : INTEGER <<PK>>
+  --
+  * file_path : TEXT <<UNIQUE>>
+  sha256_hash : TEXT
+  file_size : INTEGER
+  last_checked_at : TEXT
+  * status : TEXT
+}
+
+entity file_events {
+  * id : INTEGER <<PK>>
+  --
+  file_id : INTEGER <<FK>>
+  * file_path : TEXT
+  * event_type : TEXT
+  old_hash : TEXT
+  new_hash : TEXT
+  * occurred_at : TEXT
+  details : TEXT
+}
+
+monitored_files ||--o{ file_events : "1 to many"
+@enduml
