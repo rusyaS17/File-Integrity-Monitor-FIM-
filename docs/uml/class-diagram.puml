@@ -1,0 +1,87 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class MonitoringService {
+  +start(path: Path): void
+  +stop(): void
+  +getStatus(): MonitoringStatus
+}
+
+class ScanService {
+  +createBaseline(root: Path): List<MonitoredFile>
+  +reconcile(root: Path): List<FileEvent>
+}
+
+class FileScanner {
+  +scan(root: Path): List<Path>
+}
+
+class FileWatcher {
+  +register(root: Path): void
+  +pollEvents(): List<WatchEvent>
+  +close(): void
+}
+
+class HashCalculator {
+  +sha256(path: Path): String
+}
+
+class IntegrityChecker {
+  +compare(oldHash: String, newHash: String): EventType
+}
+
+class EventProcessor {
+  +process(path: Path, kind: WatchEvent.Kind): FileEvent
+}
+
+class DatabaseManager {
+  +getConnection(): Connection
+  +initializeSchema(): void
+}
+
+interface FileRepository {
+  +findByPath(path: String): Optional<MonitoredFile>
+  +save(file: MonitoredFile): void
+}
+
+interface EventRepository {
+  +save(event: FileEvent): void
+  +findRecent(limit: int): List<FileEvent>
+}
+
+class MonitoredFile {
+  -path: String
+  -sha256: String
+  -size: long
+  -lastCheckedAt: Instant
+}
+
+class FileEvent {
+  -path: String
+  -type: EventType
+  -oldHash: String
+  -newHash: String
+  -occurredAt: Instant
+}
+
+enum EventType {
+  NEW
+  MODIFIED
+  DELETED
+  ERROR
+}
+
+MonitoringService --> ScanService
+MonitoringService --> FileWatcher
+MonitoringService --> EventProcessor
+ScanService --> FileScanner
+ScanService --> HashCalculator
+ScanService --> FileRepository
+EventProcessor --> HashCalculator
+EventProcessor --> IntegrityChecker
+EventProcessor --> FileRepository
+EventProcessor --> EventRepository
+FileRepository ..> DatabaseManager
+EventRepository ..> DatabaseManager
+FileEvent --> EventType
+@enduml
