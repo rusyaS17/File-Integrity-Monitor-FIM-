@@ -1,0 +1,29 @@
+@startuml
+actor User
+participant "Console / JavaFX UI" as UI
+participant MonitoringService as MS
+participant FileWatcher as FW
+participant EventProcessor as EP
+participant HashCalculator as HC
+participant IntegrityChecker as IC
+database SQLite
+
+User -> UI: Каталогты таңдау
+UI -> MS: start(path)
+MS -> SQLite: Baseline оқу/сақтау
+MS -> FW: register(path)
+FW --> MS: WatchService дайын
+
+... Файл өзгерген кезде ...
+
+FW -> EP: process(path, eventKind)
+EP -> HC: sha256(path)
+HC --> EP: currentHash
+EP -> SQLite: baseline hash оқу
+SQLite --> EP: oldHash
+EP -> IC: compare(oldHash, currentHash)
+IC --> EP: MODIFIED / NEW / ERROR
+EP -> SQLite: оқиғаны және жаңа күйді сақтау
+EP --> UI: FileEvent
+UI --> User: Оқиғаны көрсету
+@enduml
