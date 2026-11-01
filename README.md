@@ -189,19 +189,27 @@ sequenceDiagram
 
     User->>UI: Каталогты таңдау
     UI->>MS: start(path)
-    MS->>DB: Baseline күйін оқу/құру
     MS->>FW: register(path)
     FW-->>MS: WatchService дайын
+    MS->>DB: Бастапқы сканерлеу және baseline сақтау
+    MS->>MS: Қысқа reconcile scan
 
     Note over FW,DB: Файлдық жүйеде оқиға пайда болады
     FW->>EP: process(path, eventKind)
-    EP->>HC: sha256(path)
-    HC-->>EP: currentHash
-    EP->>DB: Baseline хэшін оқу
-    DB-->>EP: oldHash
-    EP->>IC: compare(oldHash, currentHash)
-    IC-->>EP: EventType
-    EP->>DB: Оқиғаны және файл күйін сақтау
+    EP->>EP: Файл күйін тексеру
+    alt Файл бар және оқуға болады
+        EP->>HC: sha256(path)
+        HC-->>EP: currentHash
+        EP->>DB: Baseline хэшін оқу
+        DB-->>EP: oldHash
+        EP->>IC: compare(oldHash, currentHash)
+        IC-->>EP: NEW / MODIFIED / UNCHANGED
+        EP->>DB: Файл күйі мен оқиғаны сақтау
+    else Файл жойылған
+        EP->>DB: DELETED оқиғасын сақтау
+    else Файлға қол жеткізу қатесі
+        EP->>DB: ERROR оқиғасын сақтау
+    end
     EP-->>UI: FileEvent
     UI-->>User: Оқиғаны көрсету
 ```
