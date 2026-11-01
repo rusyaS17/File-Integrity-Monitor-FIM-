@@ -48,7 +48,7 @@ Wazuh — қауіпсіздік мониторингіне арналған а�
 
 ### 6.2 OSSEC
 
-OSSEC Syscheck компоненті файлдардың тұтастығын MD5, SHA-1 және SHA-256 checksum мәндері арқылы тексере алады. Ресми құжаттамада жоспарлы тексерулер және Linux/Windows жүйелеріндегі real-time бақылау мүмкіндігі сипатталған. Сонымен қатар real-time режимінің шектеулері бар: кейбір атрибуттар жоспарлы сканерлеу кезінде ғана анықталуы мүмкін [3].
+OSSEC Syscheck компоненті файлдардың тұтастығын MD5, SHA-1 және SHA-256 checksum мәндері арқылы тексере алады. Ресми құжаттамада жоспарлы тексерулер және Linux/Windows жүйелеріндегі real-time бақылау мүмкіндігі сипатталған. Бірақ real-time режимі барлық өзгерісті бірдей бірден анықтамайды: бұрын Syscheck дерекқорына енгізілген файлдардың мазмұны мен өлшеміндегі өзгерістер жедел анықталады, ал рұқсат/иелік атрибуттары келесі жоспарлы сканерлеуде тексеріледі. Жаңа файлдар туралы ескерту үшін қосымша баптау және толық сканерлеу қажет [3].
 
 ### 6.3 Салыстыру
 
@@ -74,7 +74,7 @@ Java объектіге бағытталған бағдарламалау, ст�
 
 WatchService каталогтардағы файлдық жүйе оқиғаларын қабылдауға арналған Java API. Ол ENTRY_CREATE, ENTRY_MODIFY және ENTRY_DELETE оқиғаларын жеткізе алады [4]. Бұл механизм файлдың мазмұнын өзі тексермейді; оқиға келгеннен кейін бағдарлама файлды қайта оқып, хэшін есептеуі керек.
 
-WatchService оқиғалары операциялық жүйе мен файлдық жүйеге тәуелді. Оқиғалар біріктірілуі немесе жоғалуы мүмкін, сондықтан тек watcher-ге сүйену толық кепілдік бермейді. Осы себепті жобада оқиғаларды өңдеу және мерзімді толық сканерлеу тәсілдері бірге қарастырылады.
+WatchService оқиғалары операциялық жүйе мен файлдық жүйеге тәуелді. Бір файлға бірнеше оқиға келуі мүмкін; оқиғалар ағыны тым көп болса, кейбірі жоғалып, OVERFLOW оқиғасы берілуі мүмкін. ENTRY_MODIFY оқиғасы файлды өзгерткен бағдарлама жұмысын аяқтады деген кепілдік бермейді [4]. Сондықтан жобада оқиғаларды өңдеу, OVERFLOW кезінде каталогты қайта тексеру және мерзімді толық сканерлеу тәсілдері бірге қарастырылады.
 
 ### 7.3 SHA-256 және MessageDigest
 
@@ -144,7 +144,7 @@ JavaFX desktop интерфейсін құруға, ал JUnit 5 автомат�
 1. Wazuh Documentation. *How it works — File integrity monitoring*. https://documentation.wazuh.com/current/user-manual/capabilities/file-integrity/how-it-works.html
 2. Wazuh Documentation. *File integrity monitoring — Use cases*. https://documentation.wazuh.com/current/getting-started/use-cases/file-integrity.html
 3. OSSEC Documentation. *Syscheck*. https://www.ossec.net/docs/docs/manual/syscheck/index.html
-4. Oracle. *WatchService (Java Platform SE 17)*. https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/WatchService.html
+4. Oracle. *WatchService (Java Platform SE 17)*. https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/WatchService.html. Қосымша: *StandardWatchEventKinds (Java Platform SE 17)*. https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/StandardWatchEventKinds.html
 5. Oracle. *MessageDigest (Java Platform SE 17)*. https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/MessageDigest.html
 6. SQLite Documentation. *About SQLite*. https://www.sqlite.org/about.html
 7. OpenJFX Documentation. https://openjfx.io/
