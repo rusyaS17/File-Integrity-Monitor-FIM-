@@ -17,10 +17,17 @@ import java.util.stream.Stream;
 /** Compares all files in a folder with the saved baseline. */
 public class DirectoryScanner {
 
-    private final HashCalculator hashCalculator;
+    private final IntegrityChecker integrityChecker;
 
     public DirectoryScanner() {
-        this.hashCalculator = new HashCalculator();
+        this.integrityChecker = new IntegrityChecker();
+    }
+
+    public DirectoryScanner(IntegrityChecker integrityChecker) {
+        if (integrityChecker == null) {
+            throw new IllegalArgumentException("IntegrityChecker must not be null");
+        }
+        this.integrityChecker = integrityChecker;
     }
 
     public ScanReport scan(Path directory, Map<String, String> baseline) throws IOException {
@@ -38,11 +45,11 @@ public class DirectoryScanner {
                 String originalHash = baseline.get(key);
 
                 try {
-                    String currentHash = hashCalculator.calculateSHA256(path);
                     if (originalHash == null) {
+                        integrityChecker.getCurrentHash(path);
                         results.add(new FileScanResult(path, FileStatus.NEW,
                                 "File is not present in the baseline"));
-                    } else if (currentHash.equals(originalHash)) {
+                    } else if (!integrityChecker.isFileModified(path, originalHash)) {
                         results.add(new FileScanResult(path, FileStatus.SAFE,
                                 "SHA-256 matches the baseline"));
                     } else {

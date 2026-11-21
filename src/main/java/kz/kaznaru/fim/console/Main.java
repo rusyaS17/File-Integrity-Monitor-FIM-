@@ -1,5 +1,6 @@
 package kz.kaznaru.fim.console;
 
+import kz.kaznaru.fim.application.ApplicationConfiguration;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.core.DirectoryScanner;
 import kz.kaznaru.fim.model.FileScanResult;
@@ -11,23 +12,24 @@ import java.nio.file.Path;
 
 public class Main {
 
-    private static final Path MONITORED_FOLDER = Path.of("monitored");
-    private static final Path BASELINE_FILE = Path.of("baseline.txt");
-
     public static void main(String[] args) {
         try {
-            Files.createDirectories(MONITORED_FOLDER);
+            ApplicationConfiguration configuration = ApplicationConfiguration.defaults();
+            Path monitoredFolder = configuration.monitoredDirectory();
+            Path baselineFile = configuration.baselineFile();
+
+            Files.createDirectories(monitoredFolder);
             BaselineManager baselineManager = new BaselineManager();
             String command = args.length == 0 ? "scan" : args[0].toLowerCase();
 
             System.out.println("========================================");
             System.out.println("       FILE INTEGRITY MONITOR");
             System.out.println("========================================");
-            System.out.println("Monitored folder: " + MONITORED_FOLDER.toAbsolutePath());
+            System.out.println("Monitored folder: " + monitoredFolder.toAbsolutePath());
 
             if (command.equals("init")) {
-                baselineManager.createBaseline(MONITORED_FOLDER);
-                baselineManager.saveBaselineToFile(BASELINE_FILE);
+                baselineManager.createBaseline(monitoredFolder);
+                baselineManager.saveBaselineToFile(baselineFile);
                 System.out.println("BASELINE CREATED SUCCESSFULLY");
                 System.out.println("Files recorded: " + baselineManager.getBaselineEntries().size());
                 System.out.println("Run the application again to scan for changes.");
@@ -39,17 +41,21 @@ public class Main {
                 return;
             }
 
-            if (!Files.exists(BASELINE_FILE)) {
-                baselineManager.createBaseline(MONITORED_FOLDER);
-                baselineManager.saveBaselineToFile(BASELINE_FILE);
+            if (!Files.exists(baselineFile)) {
+                baselineManager.createBaseline(monitoredFolder);
+                baselineManager.saveBaselineToFile(baselineFile);
                 System.out.println("No baseline was found. A new baseline has been created.");
                 System.out.println("Change or add a file in the monitored folder, then run again.");
                 return;
             }
 
-            baselineManager.loadBaselineFromFile(BASELINE_FILE);
+            baselineManager.loadBaselineFromFile(baselineFile, monitoredFolder);
+            if (baselineManager.wasRecoveredFromBackup()) {
+                System.out.println("WARNING: The primary baseline was invalid or missing.");
+                System.out.println("Recovered and restored a valid baseline backup.");
+            }
             DirectoryScanner scanner = new DirectoryScanner();
-            ScanReport report = scanner.scan(MONITORED_FOLDER,
+            ScanReport report = scanner.scan(monitoredFolder,
                     baselineManager.getBaselineEntries());
             printReport(report);
 
