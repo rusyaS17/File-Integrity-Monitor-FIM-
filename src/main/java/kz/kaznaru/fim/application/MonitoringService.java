@@ -10,10 +10,11 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -29,6 +30,8 @@ public final class MonitoringService implements AutoCloseable {
     private final Duration debounceDuration;
     private final Duration reconciliationInterval;
     private final Consumer<Throwable> errorHandler;
+    private final CopyOnWriteArrayList<Consumer<Throwable>> errorListeners =
+            new CopyOnWriteArrayList<>();
     private final Object processingLock = new Object();
 
     private volatile boolean running;
@@ -134,6 +137,14 @@ public final class MonitoringService implements AutoCloseable {
         return running;
     }
 
+    public void addErrorListener(Consumer<Throwable> listener) {
+        errorListeners.addIfAbsent(Objects.requireNonNull(listener, "listener"));
+    }
+
+    public boolean removeErrorListener(Consumer<Throwable> listener) {
+        return errorListeners.remove(Objects.requireNonNull(listener, "listener"));
+    }
+
     public Throwable lastFailure() {
         return lastFailure;
     }
@@ -179,8 +190,21 @@ public final class MonitoringService implements AutoCloseable {
         try {
             errorHandler.accept(failure);
         } catch (RuntimeException handlerFailure) {
-            failure.addSuppressed(handlerFailure);
+            if (handlerFailure != failure) {
+                failure.addSuppressed(handlerFailure);
+            }
             System.err.println("Monitoring error handler failed: " + handlerFailure.getMessage());
+        }
+        for (Consumer<Throwable> listener : errorListeners) {
+            try {
+                listener.accept(failure);
+            } catch (RuntimeException listenerFailure) {
+                if (listenerFailure != failure) {
+                    failure.addSuppressed(listenerFailure);
+                }
+                System.err.println(
+                        "Monitoring error listener failed: " + listenerFailure.getMessage());
+            }
         }
     }
 

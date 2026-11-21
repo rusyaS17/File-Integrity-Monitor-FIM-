@@ -1,13 +1,17 @@
 package kz.kaznaru.fim.database;
 
 import kz.kaznaru.fim.model.FileStatus;
+import kz.kaznaru.fim.model.FileStatusCounts;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Stores the latest observed state for each file under each monitored root. */
@@ -27,6 +31,29 @@ public final class FileRepository {
 
     public List<MonitoredFileRecord> findByRoot(String monitorRoot) throws SQLException {
         return databaseManager.withConnection(connection -> findByRoot(connection, monitorRoot));
+    }
+
+    public FileStatusCounts getStatusCountsByRoot(String monitorRoot) throws SQLException {
+        Objects.requireNonNull(monitorRoot, "monitorRoot");
+        String sql = """
+                SELECT status, COUNT(*) AS status_count
+                FROM monitored_files
+                WHERE monitor_root = ?
+                GROUP BY status
+                """;
+        Map<FileStatus, Long> counts = new EnumMap<>(FileStatus.class);
+        try (Connection connection = databaseManager.openConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, monitorRoot);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    counts.put(
+                            FileStatus.valueOf(resultSet.getString("status")),
+                            resultSet.getLong("status_count"));
+                }
+            }
+        }
+        return new FileStatusCounts(counts);
     }
 
     public long save(MonitoredFileRecord file) throws SQLException {

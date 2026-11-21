@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 /** Persists each scan's latest file state and only emits events for state changes. */
 public final class ScanPersistenceService {
@@ -26,11 +28,22 @@ public final class ScanPersistenceService {
     private final DatabaseManager databaseManager;
     private final FileRepository fileRepository;
     private final EventRepository eventRepository;
+    private final CopyOnWriteArrayList<Consumer<RootUpdatedEvent>> rootUpdatedListeners =
+            new CopyOnWriteArrayList<>();
 
     public ScanPersistenceService(DatabaseManager databaseManager) {
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager");
         this.fileRepository = new FileRepository(databaseManager);
         this.eventRepository = new EventRepository(databaseManager);
+    }
+
+    public void addRootUpdatedListener(Consumer<RootUpdatedEvent> listener) {
+        rootUpdatedListeners.addIfAbsent(
+                Objects.requireNonNull(listener, "listener"));
+    }
+
+    public boolean removeRootUpdatedListener(Consumer<RootUpdatedEvent> listener) {
+        return rootUpdatedListeners.remove(Objects.requireNonNull(listener, "listener"));
     }
 
     public void persist(Path monitoredRoot, ScanReport report) throws SQLException {
@@ -89,6 +102,18 @@ public final class ScanPersistenceService {
             }
             return null;
         });
+        publishRootUpdated(new RootUpdatedEvent(root, Instant.now()));
+    }
+
+    private void publishRootUpdated(RootUpdatedEvent event) {
+        for (Consumer<RootUpdatedEvent> listener : rootUpdatedListeners) {
+            try {
+                listener.accept(event);
+            } catch (RuntimeException exception) {
+                System.err.println("Root-updated listener failed for "
+                        + event.monitorRoot() + ": " + exception.getMessage());
+            }
+        }
     }
 
     private boolean isChanged(MonitoredFileRecord previous, FileScanResult current) {

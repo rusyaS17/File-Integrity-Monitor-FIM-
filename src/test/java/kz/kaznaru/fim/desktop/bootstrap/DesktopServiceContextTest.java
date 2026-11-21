@@ -1,14 +1,20 @@
 package kz.kaznaru.fim.desktop.bootstrap;
 
 import kz.kaznaru.fim.application.ApplicationConfiguration;
+import kz.kaznaru.fim.application.RootUpdatedEvent;
+import kz.kaznaru.fim.application.DashboardSnapshot;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.database.DatabaseManager;
+import kz.kaznaru.fim.model.FileStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -75,6 +81,43 @@ class DesktopServiceContextTest {
         context.close();
 
         assertFalse(context.monitoringService().isRunning());
+    }
+
+    @Test
+    void runsScansDashboardQueriesAndMonitoringLifecycleAsynchronously() throws Exception {
+        ApplicationConfiguration configuration = configuration();
+        Files.createDirectories(configuration.monitoredDirectory());
+        Files.writeString(configuration.monitoredDirectory().resolve("sample.txt"), "new file");
+        try (DesktopServiceContext context = new DesktopServiceContext(configuration)) {
+            var updates = new CopyOnWriteArrayList<RootUpdatedEvent>();
+            context.addRootUpdatedListener(updates::add);
+
+            var scan = context.scanAsync();
+            var report = scan.completion().toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertEquals(1, report.count(FileStatus.NEW));
+            assertEquals(1, updates.size());
+
+            DashboardSnapshot snapshot = context.queryDashboardAsync(
+                            Instant.EPOCH,
+                            Instant.now().plus(Duration.ofDays(1)),
+                            Duration.ofHours(1),
+                            10)
+                    .completion()
+                    .toCompletableFuture()
+                    .get(5, TimeUnit.SECONDS);
+            assertEquals(1, snapshot.fileStatusCounts().count(FileStatus.NEW));
+            assertEquals(1, snapshot.recentEvents().size());
+            assertEquals(1, snapshot.activityBuckets().stream()
+                    .mapToLong(bucket -> bucket.totalEvents())
+                    .sum());
+
+            context.startMonitoringAsync().completion()
+                    .toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertTrue(context.monitoringService().isRunning());
+            context.stopMonitoringAsync().completion()
+                    .toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertFalse(context.monitoringService().isRunning());
+        }
     }
 
     @Test

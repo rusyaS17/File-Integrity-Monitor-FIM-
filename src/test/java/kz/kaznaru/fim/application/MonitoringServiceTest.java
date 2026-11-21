@@ -24,6 +24,7 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -197,6 +198,39 @@ class MonitoringServiceTest {
                 FileWatchEvent.Kind.ERROR, "watch registration failed"));
 
         awaitEvent(root.resolve("unreadable"), FileStatus.ERROR);
+    }
+
+    @Test
+    void forwardsMonitoringFailuresToRegisteredErrorListeners() throws Exception {
+        CountDownLatch failureReceived = new CountDownLatch(1);
+        AtomicReference<Throwable> observedFailure = new AtomicReference<>();
+        EventProcessor failingProcessor = new EventProcessor(
+                root, Map.of(), new DirectoryScanner(), persistenceService) {
+            @Override
+            public void process(FileWatchEvent event) throws IOException {
+                throw new IOException("injected event-processing failure");
+            }
+        };
+        MonitoringService monitoringService = new MonitoringService(
+                root,
+                failingProcessor,
+                Duration.ZERO,
+                Duration.ofSeconds(5),
+                failure -> { });
+        Consumer<Throwable> listener = failure -> {
+            observedFailure.set(failure);
+            failureReceived.countDown();
+        };
+        monitoringService.addErrorListener(listener);
+
+        try (monitoringService) {
+            monitoringService.start();
+            Files.writeString(root.resolve("trigger.txt"), "trigger");
+
+            assertTrue(failureReceived.await(3, TimeUnit.SECONDS));
+            assertInstanceOf(IOException.class, observedFailure.get());
+            assertTrue(monitoringService.removeErrorListener(listener));
+        }
     }
 
     private EventProcessor eventProcessor(Map<String, String> baseline) {
