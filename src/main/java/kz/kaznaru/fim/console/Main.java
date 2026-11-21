@@ -1,6 +1,8 @@
 package kz.kaznaru.fim.console;
 
 import kz.kaznaru.fim.application.ApplicationConfiguration;
+import kz.kaznaru.fim.application.EventProcessor;
+import kz.kaznaru.fim.application.MonitoringService;
 import kz.kaznaru.fim.application.ScanPersistenceService;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.core.DirectoryScanner;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
 
 public class Main {
 
@@ -45,8 +48,14 @@ public class Main {
                 return;
             }
 
+            if (command.equals("monitor")) {
+                monitor(monitoredFolder, baselineFile, baselineManager, persistenceService,
+                        configuration);
+                return;
+            }
+
             if (!command.equals("scan")) {
-                System.out.println("Unknown command. Use: init or scan");
+                System.out.println("Unknown command. Use: init, scan, or monitor");
                 return;
             }
 
@@ -82,6 +91,58 @@ public class Main {
         ScanReport report = new DirectoryScanner().scan(
                 monitoredFolder, baselineManager.getBaselineEntries());
         persistenceService.persist(monitoredFolder, report);
+    }
+
+    private static void monitor(
+            Path monitoredFolder,
+            Path baselineFile,
+            BaselineManager baselineManager,
+            ScanPersistenceService persistenceService,
+            ApplicationConfiguration configuration)
+            throws IOException, SQLException, InterruptedException {
+        if (Files.exists(baselineFile)) {
+            baselineManager.loadBaselineFromFile(baselineFile, monitoredFolder);
+            if (baselineManager.wasRecoveredFromBackup()) {
+                System.out.println("WARNING: Recovered the baseline from its backup.");
+            }
+        } else {
+            baselineManager.createBaseline(monitoredFolder);
+            baselineManager.saveBaselineToFile(baselineFile);
+            persistInitialScan(monitoredFolder, baselineManager, persistenceService);
+            System.out.println("No baseline was found. A new baseline has been created.");
+        }
+
+        DirectoryScanner scanner = new DirectoryScanner();
+        EventProcessor eventProcessor = new EventProcessor(
+                monitoredFolder,
+                baselineManager.getBaselineEntries(),
+                scanner,
+                persistenceService);
+        CountDownLatch shutdownRequested = new CountDownLatch(1);
+
+        try (MonitoringService monitoringService = new MonitoringService(
+                monitoredFolder,
+                eventProcessor,
+                configuration.watchDebounceDuration(),
+                configuration.reconciliationInterval())) {
+            monitoringService.start();
+            Thread shutdownHook = new Thread(() -> {
+                monitoringService.stop();
+                shutdownRequested.countDown();
+            }, "fim-shutdown");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+            try {
+                System.out.println("Real-time monitoring started. Press Ctrl+C to stop.");
+                shutdownRequested.await();
+            } finally {
+                monitoringService.stop();
+                try {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException ignored) {
+                    // The JVM is already running shutdown hooks.
+                }
+            }
+        }
     }
 
     private static void printReport(ScanReport report) {

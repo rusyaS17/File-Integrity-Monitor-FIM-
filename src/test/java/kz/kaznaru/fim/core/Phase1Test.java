@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,6 +33,22 @@ class Phase1Test {
                 configuration.baselineFile());
         assertEquals(temporaryDirectory.resolve("fim.db").normalize(),
                 configuration.databaseFile());
+    }
+
+    @Test
+    void applicationConfigurationAcceptsMonitoringSettings() {
+        ApplicationConfiguration configuration =
+                ApplicationConfiguration.forDirectory(
+                        temporaryDirectory, Duration.ofMillis(75), Duration.ofSeconds(12));
+
+        assertEquals(Duration.ofMillis(75), configuration.watchDebounceDuration());
+        assertEquals(Duration.ofSeconds(12), configuration.reconciliationInterval());
+        assertThrows(IllegalArgumentException.class,
+                () -> ApplicationConfiguration.forDirectory(
+                        temporaryDirectory, Duration.ofMillis(-1), Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class,
+                () -> ApplicationConfiguration.forDirectory(
+                        temporaryDirectory, Duration.ZERO, Duration.ZERO));
     }
 
     @Test
