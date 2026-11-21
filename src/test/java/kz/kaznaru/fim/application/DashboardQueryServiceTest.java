@@ -73,6 +73,12 @@ class DashboardQueryServiceTest {
         for (FileStatus status : FileStatus.values()) {
             assertEquals(1, snapshot.fileStatusCounts().count(status));
         }
+        assertEquals(1, snapshot.fileStatusCounts().count(FileStatus.SAFE));
+        assertEquals(1, snapshot.fileStatusCounts().count(FileStatus.MODIFIED));
+        assertEquals(1, snapshot.fileStatusCounts().count(FileStatus.NEW));
+        assertEquals(1, snapshot.fileStatusCounts().count(FileStatus.DELETED));
+        assertEquals(2, snapshot.fileStatusCounts().count(FileStatus.MODIFIED)
+                + snapshot.fileStatusCounts().count(FileStatus.ERROR));
         assertEquals(1, snapshot.recentEvents().size());
         assertEquals("latest-deleted", snapshot.recentEvents().get(0).details());
         assertEquals(3, snapshot.activityBuckets().size());

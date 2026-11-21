@@ -5,7 +5,9 @@ import kz.kaznaru.fim.application.RootUpdatedEvent;
 import kz.kaznaru.fim.application.DashboardSnapshot;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.database.DatabaseManager;
+import kz.kaznaru.fim.desktop.controller.MainShellController;
 import kz.kaznaru.fim.model.FileStatus;
+import javafx.fxml.FXML;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,6 +17,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -121,13 +128,55 @@ class DesktopServiceContextTest {
     }
 
     @Test
-    void startupFxmlContainsRequiredVerificationText() throws Exception {
+    void mainShellFxmlContainsNavigationAndDashboardSections() throws Exception {
         var resource = getClass().getResource(
-                "/kz/kaznaru/fim/desktop/view/startup.fxml");
+                "/kz/kaznaru/fim/desktop/view/main-shell.fxml");
         assertNotNull(resource);
         String fxml = Files.readString(Path.of(resource.toURI()));
         assertTrue(fxml.contains("FIM SENTINEL"));
-        assertTrue(fxml.contains("CYBERSECURITY OPERATIONS CENTER"));
+        assertTrue(fxml.contains("fx:controller=\"kz.kaznaru.fim.desktop.controller.MainShellController\""));
+        assertTrue(fxml.contains("Dashboard"));
+        assertTrue(fxml.contains("File Monitoring"));
+        assertTrue(fxml.contains("File Scanner"));
+        assertTrue(fxml.contains("Event History"));
+        assertTrue(fxml.contains("Baseline Management"));
+        assertTrue(fxml.contains("Settings"));
+        assertTrue(fxml.contains("Not refreshed yet"));
+        assertTrue(fxml.contains("fx:id=\"totalFilesValue\""));
+        assertTrue(fxml.contains("fx:id=\"threatsErrorsValue\""));
+        assertTrue(fxml.contains("LineChart"));
+        assertTrue(fxml.contains("fx:id=\"recentEventsTable\""));
+        assertTrue(fxml.contains("fx:id=\"startMonitoringButton\""));
+        assertTrue(fxml.contains("prefColumns=\"3\""));
+        assertTrue(fxml.contains("prefTileWidth=\"280.0\""));
+        assertFalse(fxml.contains("minTileWidth="));
+        assertFalse(fxml.contains("maxTileWidth="));
+        assertFalse(fxml.contains("columnResizePolicy="));
+        assertFalse(fxml.contains("Dashboard data is not connected yet"));
+        assertControllerBindings(fxml);
+        assertNotNull(getClass().getResource(
+                "/kz/kaznaru/fim/desktop/css/fim-sentinel.css"));
+        try (var input = resource.openStream()) {
+            DocumentBuilderFactory.newInstance()
+                    .newDocumentBuilder()
+                    .parse(input);
+        }
+    }
+
+    private void assertControllerBindings(String fxml) throws Exception {
+        Matcher idMatcher = Pattern.compile("fx:id=\"([^\"]+)\"").matcher(fxml);
+        while (idMatcher.find()) {
+            Field field = MainShellController.class.getDeclaredField(idMatcher.group(1));
+            assertTrue(field.isAnnotationPresent(FXML.class),
+                    () -> "FXML field is missing @FXML: " + field.getName());
+        }
+
+        Matcher actionMatcher = Pattern.compile("onAction=\"#([^\"]+)\"").matcher(fxml);
+        while (actionMatcher.find()) {
+            Method method = MainShellController.class.getDeclaredMethod(actionMatcher.group(1));
+            assertTrue(method.isAnnotationPresent(FXML.class),
+                    () -> "FXML handler is missing @FXML: " + method.getName());
+        }
     }
 
     private ApplicationConfiguration configuration() {

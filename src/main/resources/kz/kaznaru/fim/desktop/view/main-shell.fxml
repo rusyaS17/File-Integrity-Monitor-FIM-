@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane minWidth="1100.0" minHeight="700.0"
+            styleClass="application-shell"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="kz.kaznaru.fim.desktop.controller.MainShellController">
+    <left>
+        <VBox minWidth="220.0" prefWidth="240.0" maxWidth="240.0"
+              styleClass="sidebar">
+            <padding>
+                <Insets top="28.0" right="16.0" bottom="20.0" left="16.0"/>
+            </padding>
+            <children>
+                <VBox spacing="32.0">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <StackPane minWidth="40.0" minHeight="40.0"
+                                   prefWidth="40.0" prefHeight="40.0"
+                                   styleClass="brand-mark">
+                            <Label text="F" styleClass="brand-mark-letter"/>
+                        </StackPane>
+                        <VBox spacing="4.0">
+                            <Label text="FIM SENTINEL" styleClass="brand-title"/>
+                            <Label text="CYBERSECURITY // FIM"
+                                   styleClass="brand-caption"/>
+                        </VBox>
+                    </HBox>
+
+                    <VBox spacing="8.0">
+                        <Label text="OPERATIONS" styleClass="section-caption"/>
+                        <VBox spacing="4.0" fillWidth="true">
+                            <Button fx:id="dashboardButton"
+                                    styleClass="nav-button"
+                                    accessibleText="Dashboard">
+                                <graphic>
+                                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                        <Label text="◈" styleClass="nav-icon"/>
+                                        <Label text="Dashboard" styleClass="nav-label"/>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                            <Button fx:id="monitoringButton" styleClass="nav-button">
+                                <graphic>
+                                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                        <Label text="◉" styleClass="nav-icon"/>
+                                        <Label text="File Monitoring" styleClass="nav-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="SOON" styleClass="coming-soon"/>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                            <Button fx:id="scannerButton" styleClass="nav-button">
+                                <graphic>
+                                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                        <Label text="⌕" styleClass="nav-icon"/>
+                                        <Label text="File Scanner" styleClass="nav-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="SOON" styleClass="coming-soon"/>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                            <Button fx:id="historyButton" styleClass="nav-button">
+                                <graphic>
+                                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                        <Label text="▤" styleClass="nav-icon"/>
+                                        <Label text="Event History" styleClass="nav-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="SOON" styleClass="coming-soon"/>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                            <Button fx:id="baselineButton"
+                                    styleClass="nav-button"
+                                    accessibleText="Baseline Management, coming soon">
+                                <graphic>
+                                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                        <Label text="⬡" styleClass="nav-icon"/>
+                                        <Label text="Baseline Management"
+                                               styleClass="nav-label"/>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <Label text="PREFERENCES" styleClass="section-caption"/>
+                        <Button fx:id="settingsButton" styleClass="nav-button">
+                            <graphic>
+                                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                    <Label text="⚙" styleClass="nav-icon"/>
+                                    <Label text="Settings" styleClass="nav-label"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label text="SOON" styleClass="coming-soon"/>
+                                </HBox>
+                            </graphic>
+                        </Button>
+                    </VBox>
+                </VBox>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <VBox spacing="8.0" styleClass="sidebar-footer">
+                    <Separator/>
+                    <Label text="LOCAL INTEGRITY MONITOR"
+                           styleClass="footer-caption"/>
+                    <Label text="Java 17  ·  Desktop"
+                           styleClass="footer-value"/>
+                </VBox>
+            </children>
+        </VBox>
+    </left>
+
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="top-bar">
+            <padding>
+                <Insets top="12.0" right="32.0" bottom="12.0" left="32.0"/>
+            </padding>
+            <children>
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <HBox alignment="CENTER_LEFT" spacing="8.0"
+                          styleClass="status-chip">
+                        <Circle fx:id="systemStatusIndicator" radius="4.0"
+                                styleClass="status-indicator"/>
+                        <VBox spacing="2.0">
+                            <Label text="SYSTEM" styleClass="status-caption"/>
+                            <Label fx:id="systemStatusValue"
+                                   text="READY" styleClass="status-value"/>
+                        </VBox>
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" spacing="8.0"
+                          styleClass="status-chip">
+                        <Circle fx:id="monitoringStatusIndicator" radius="4.0"
+                                styleClass="status-indicator"/>
+                        <VBox spacing="2.0">
+                            <Label text="MONITORING" styleClass="status-caption"/>
+                            <Label fx:id="monitoringStatusValue"
+                                   text="STOPPED" styleClass="status-value"/>
+                        </VBox>
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" spacing="8.0"
+                          styleClass="status-chip">
+                        <Circle fx:id="databaseStatusIndicator" radius="4.0"
+                                styleClass="status-indicator"/>
+                        <VBox spacing="2.0">
+                            <Label text="DATABASE" styleClass="status-caption"/>
+                            <Label fx:id="databaseStatusValue"
+                                   text="READY" styleClass="status-value"/>
+                        </VBox>
+                    </HBox>
+                </HBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <VBox alignment="CENTER_RIGHT" spacing="2.0">
+                    <Label text="LOCAL TIME" styleClass="status-caption"/>
+                    <HBox alignment="BASELINE_RIGHT" spacing="8.0">
+                        <Label fx:id="localClockValue"
+                               text="--:--:--" styleClass="clock-value"/>
+                        <Label fx:id="localDateValue"
+                               text="---, -- ---" styleClass="clock-date"/>
+                    </HBox>
+                </VBox>
+            </children>
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+                    styleClass="content-scroll">
+            <content>
+                <VBox spacing="22.0" styleClass="page-content">
+                    <padding>
+                        <Insets top="30.0" right="36.0" bottom="36.0" left="36.0"/>
+                    </padding>
+                    <children>
+                        <HBox alignment="CENTER_LEFT" spacing="20.0">
+                            <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                <Label text="SECURITY OPERATIONS"
+                                       styleClass="page-eyebrow"/>
+                                <Label text="Dashboard" styleClass="page-title"/>
+                                <Label text="Integrity posture and persisted activity for your monitored environment."
+                                       wrapText="true" styleClass="page-subtitle"/>
+                            </VBox>
+                            <VBox alignment="CENTER_RIGHT" spacing="6.0">
+                                <Label text="LAST SUCCESSFUL REFRESH"
+                                       styleClass="panel-caption"/>
+                                <Label fx:id="lastRefreshValue"
+                                       text="Not refreshed yet"
+                                       styleClass="refresh-value"/>
+                            </VBox>
+                            <ProgressIndicator fx:id="dashboardProgress"
+                                               prefWidth="24.0" prefHeight="24.0"
+                                               maxWidth="24.0" maxHeight="24.0"
+                                               visible="false" managed="false"
+                                               styleClass="compact-progress"/>
+                            <Button fx:id="refreshButton"
+                                    text="Refresh"
+                                    onAction="#refreshDashboard"
+                                    styleClass="action-button primary-action"/>
+                        </HBox>
+
+                        <Label fx:id="dashboardErrorLabel"
+                               visible="false" managed="false"
+                               wrapText="true" styleClass="error-banner"/>
+
+                        <TilePane hgap="14.0" vgap="14.0"
+                                  prefColumns="3"
+                                  prefTileWidth="280.0"
+                                  prefTileHeight="112.0"
+                                  tileAlignment="TOP_LEFT"
+                                  styleClass="metric-grid">
+                            <children>
+                                <VBox spacing="10.0" styleClass="metric-card metric-total">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="TOTAL FILES" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="Σ" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="totalFilesValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="All states except deleted"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                                <VBox spacing="10.0" styleClass="metric-card metric-safe">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="PROTECTED FILES" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="✓" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="protectedFilesValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="Current SAFE state"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                                <VBox spacing="10.0" styleClass="metric-card metric-modified">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="MODIFIED FILES" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="!" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="modifiedFilesValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="Different from baseline"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                                <VBox spacing="10.0" styleClass="metric-card metric-new">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="NEW FILES" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="+" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="newFilesValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="Not present in baseline"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                                <VBox spacing="10.0" styleClass="metric-card metric-deleted">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="DELETED FILES" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="−" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="deletedFilesValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="Missing from latest observed state"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                                <VBox spacing="10.0" styleClass="metric-card metric-threat">
+                                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                        <Label text="THREATS / ERRORS" styleClass="metric-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label text="⌁" styleClass="metric-glyph"/>
+                                    </HBox>
+                                    <Label fx:id="threatsErrorsValue" text="—"
+                                           styleClass="metric-value"/>
+                                    <Label text="MODIFIED + ERROR"
+                                           styleClass="metric-footnote"/>
+                                </VBox>
+                            </children>
+                        </TilePane>
+
+                        <HBox spacing="16.0" styleClass="dashboard-detail-row">
+                            <VBox spacing="14.0" HBox.hgrow="ALWAYS"
+                                  styleClass="dashboard-panel activity-panel">
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                        <Label text="File activity" styleClass="panel-title"/>
+                                        <Label text="Persisted event volume · last 24 hours · local time"
+                                               styleClass="panel-subtitle"/>
+                                    </VBox>
+                                    <Label text="EVENTS / HOUR" styleClass="chart-unit"/>
+                                </HBox>
+                                <StackPane minHeight="235.0" prefHeight="250.0"
+                                           styleClass="chart-container">
+                                    <LineChart fx:id="activityChart"
+                                               animated="false"
+                                               legendVisible="false"
+                                               createSymbols="true"
+                                               visible="false" managed="false"
+                                               styleClass="activity-chart">
+                                        <xAxis>
+                                            <CategoryAxis label="Local time"/>
+                                        </xAxis>
+                                        <yAxis>
+                                            <NumberAxis label="Events"
+                                                        forceZeroInRange="true"
+                                                        minorTickVisible="false"/>
+                                        </yAxis>
+                                    </LineChart>
+                                    <Label fx:id="activityEmptyState"
+                                           text="Loading persisted activity..."
+                                           wrapText="true"
+                                           styleClass="empty-state-copy"/>
+                                </StackPane>
+                            </VBox>
+
+                            <VBox spacing="14.0" minWidth="280.0" prefWidth="310.0"
+                                  maxWidth="360.0" styleClass="dashboard-panel monitoring-panel">
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                        <Label text="Monitoring overview"
+                                               styleClass="panel-title"/>
+                                        <Label text="REAL-TIME WATCH SERVICE"
+                                               styleClass="panel-subtitle"/>
+                                    </VBox>
+                                    <ProgressIndicator fx:id="monitoringProgress"
+                                                       prefWidth="22.0" prefHeight="22.0"
+                                                       maxWidth="22.0" maxHeight="22.0"
+                                                       visible="false" managed="false"
+                                                       styleClass="compact-progress"/>
+                                </HBox>
+                                <HBox alignment="CENTER_LEFT" spacing="10.0"
+                                      styleClass="monitoring-state-card">
+                                    <Circle fx:id="monitoringOverviewIndicator"
+                                            radius="5.0" styleClass="status-indicator"/>
+                                    <VBox spacing="3.0">
+                                        <Label text="MONITORING STATE"
+                                               styleClass="panel-caption"/>
+                                        <Label fx:id="monitoringStateValue"
+                                               text="STOPPED" styleClass="monitoring-state-value"/>
+                                    </VBox>
+                                </HBox>
+                                <VBox spacing="7.0">
+                                    <Label text="CONFIGURED ROOT"
+                                           styleClass="panel-caption"/>
+                                    <Label fx:id="monitoredRootValue"
+                                           text="Loading configured path..."
+                                           wrapText="true" styleClass="path-value"/>
+                                </VBox>
+                                <HBox spacing="10.0" styleClass="monitoring-actions">
+                                    <Button fx:id="startMonitoringButton"
+                                            text="Start monitoring"
+                                            onAction="#startMonitoring"
+                                            maxWidth="Infinity"
+                                            HBox.hgrow="ALWAYS"
+                                            styleClass="action-button primary-action"/>
+                                    <Button fx:id="stopMonitoringButton"
+                                            text="Stop"
+                                            onAction="#stopMonitoring"
+                                            maxWidth="Infinity"
+                                            HBox.hgrow="ALWAYS"
+                                            styleClass="action-button secondary-action"/>
+                                </HBox>
+                                <Label fx:id="monitoringErrorLabel"
+                                       visible="false" managed="false"
+                                       wrapText="true" styleClass="monitoring-error"/>
+                            </VBox>
+                        </HBox>
+
+                        <VBox spacing="14.0" styleClass="dashboard-panel recent-events-panel">
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label text="Recent events" styleClass="panel-title"/>
+                                    <Label text="Latest persisted file states for this monitored root"
+                                           styleClass="panel-subtitle"/>
+                                </VBox>
+                                <Label text="LATEST 10" styleClass="chart-unit"/>
+                            </HBox>
+                            <StackPane minHeight="205.0" prefHeight="250.0"
+                                       styleClass="events-container">
+                                <TableView fx:id="recentEventsTable"
+                                           visible="false" managed="false"
+                                           styleClass="recent-events-table">
+                                    <columns>
+                                        <TableColumn fx:id="timeColumn" text="Time"
+                                                     prefWidth="150.0"/>
+                                        <TableColumn fx:id="filePathColumn" text="File"
+                                                     prefWidth="560.0"/>
+                                        <TableColumn fx:id="eventTypeColumn" text="Event Type"
+                                                     prefWidth="150.0"/>
+                                        <TableColumn fx:id="statusColumn" text="Status"
+                                                     prefWidth="130.0"/>
+                                    </columns>
+                                </TableView>
+                                <Label fx:id="recentEventsEmptyState"
+                                       text="Loading events..."
+                                       styleClass="empty-state-copy"/>
+                            </StackPane>
+                        </VBox>
+                    </children>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>
