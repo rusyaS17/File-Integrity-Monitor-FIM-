@@ -17,10 +17,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -91,13 +95,31 @@ class MonitoringServiceTest {
                     Duration.ofSeconds(3));
             Path nestedFile = nestedDirectory.resolve("nested.txt");
             Files.writeString(nestedFile, "first version");
-            FileEventRecord created = awaitEvent(nestedFile, FileStatus.NEW);
+            String firstVersionHash = hash(nestedFile);
+            FileEventRecord[] created = new FileEventRecord[1];
+            awaitCondition(() -> {
+                created[0] = eventRepository.findByPath(
+                                root.toString(), key(nestedFile)).stream()
+                        .filter(event -> event.eventType() == FileStatus.NEW
+                                && firstVersionHash.equals(event.newHash()))
+                        .findFirst()
+                        .orElse(null);
+                return created[0] != null;
+            }, Duration.ofSeconds(3));
 
             Files.writeString(nestedFile, "second version");
-            awaitCondition(() -> eventRepository.findByPath(root.toString(), key(nestedFile))
-                            .stream()
-                            .anyMatch(event -> !event.newHash().equals(created.newHash())),
-                    Duration.ofSeconds(3));
+            AtomicReference<List<FileEventRecord>> observedEvents =
+                    new AtomicReference<>(List.of());
+            awaitCondition(() -> {
+                        List<FileEventRecord> events = eventRepository.findByPath(
+                                root.toString(), key(nestedFile));
+                        observedEvents.set(events);
+                        return events.stream()
+                                .anyMatch(event -> !event.newHash().equals(created[0].newHash()));
+                    },
+                    Duration.ofSeconds(3),
+                    () -> "Expected a new hash event; persisted events=" + observedEvents.get()
+                            + ", monitoring failure=" + service.lastFailure());
         }
     }
 
@@ -200,14 +222,28 @@ class MonitoringServiceTest {
     }
 
     private void awaitCondition(CheckedBooleanSupplier condition, Duration timeout) throws Exception {
+        awaitCondition(condition, timeout, () -> "Condition was not met before timeout");
+    }
+
+    private void awaitCondition(
+            CheckedBooleanSupplier condition,
+            Duration timeout,
+            Supplier<String> failureMessage) throws Exception {
         long deadline = System.nanoTime() + timeout.toNanos();
         while (System.nanoTime() < deadline) {
             if (condition.getAsBoolean()) {
                 return;
             }
-            Thread.yield();
+            long remaining = deadline - System.nanoTime();
+            if (remaining > 0) {
+                LockSupport.parkNanos(Math.min(
+                        TimeUnit.MILLISECONDS.toNanos(10), remaining));
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException("Interrupted while awaiting test condition");
+            }
         }
-        assertTrue(condition.getAsBoolean(), "Condition was not met before timeout");
+        assertTrue(condition.getAsBoolean(), failureMessage.get());
     }
 
     @FunctionalInterface

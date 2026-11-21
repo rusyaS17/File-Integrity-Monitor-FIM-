@@ -29,6 +29,7 @@ public final class MonitoringService implements AutoCloseable {
     private final Duration debounceDuration;
     private final Duration reconciliationInterval;
     private final Consumer<Throwable> errorHandler;
+    private final Object processingLock = new Object();
 
     private volatile boolean running;
     private volatile Throwable lastFailure;
@@ -117,10 +118,12 @@ public final class MonitoringService implements AutoCloseable {
             running = false;
             closeResources();
             if (reconcileFinalState) {
-                try {
-                    eventProcessor.reconcile();
-                } catch (IOException | java.sql.SQLException | RuntimeException exception) {
-                    reportFailure(exception);
+                synchronized (processingLock) {
+                    try {
+                        eventProcessor.reconcile();
+                    } catch (IOException | java.sql.SQLException | RuntimeException exception) {
+                        reportFailure(exception);
+                    }
                 }
             }
             ACTIVE_ROOTS.remove(monitoredRoot, this);
@@ -141,29 +144,33 @@ public final class MonitoringService implements AutoCloseable {
     }
 
     private void processEvent(FileWatchEvent event) {
-        if (!running) {
-            return;
-        }
-        try {
-            eventProcessor.process(event);
-        } catch (IOException | java.sql.SQLException | RuntimeException exception) {
-            reportFailure(exception);
+        synchronized (processingLock) {
+            if (!running) {
+                return;
+            }
+            try {
+                eventProcessor.process(event);
+            } catch (IOException | java.sql.SQLException | RuntimeException exception) {
+                reportFailure(exception);
+            }
         }
     }
 
     private void reconcileSafely() {
-        if (!running) {
-            return;
-        }
-        try {
-            fileWatcher.registerExistingDirectories();
-        } catch (IOException | RuntimeException exception) {
-            reportFailure(exception);
-        }
-        try {
-            eventProcessor.reconcile();
-        } catch (IOException | java.sql.SQLException | RuntimeException exception) {
-            reportFailure(exception);
+        synchronized (processingLock) {
+            if (!running) {
+                return;
+            }
+            try {
+                fileWatcher.registerExistingDirectories();
+            } catch (IOException | RuntimeException exception) {
+                reportFailure(exception);
+            }
+            try {
+                eventProcessor.reconcile();
+            } catch (IOException | java.sql.SQLException | RuntimeException exception) {
+                reportFailure(exception);
+            }
         }
     }
 
