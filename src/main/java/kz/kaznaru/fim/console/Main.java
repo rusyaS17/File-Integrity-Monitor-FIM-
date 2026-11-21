@@ -1,14 +1,18 @@
 package kz.kaznaru.fim.console;
 
 import kz.kaznaru.fim.application.ApplicationConfiguration;
+import kz.kaznaru.fim.application.ScanPersistenceService;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.core.DirectoryScanner;
+import kz.kaznaru.fim.database.DatabaseManager;
 import kz.kaznaru.fim.model.FileScanResult;
 import kz.kaznaru.fim.model.FileStatus;
 import kz.kaznaru.fim.model.ScanReport;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 
 public class Main {
 
@@ -19,6 +23,10 @@ public class Main {
             Path baselineFile = configuration.baselineFile();
 
             Files.createDirectories(monitoredFolder);
+            DatabaseManager databaseManager = new DatabaseManager(configuration.databaseFile());
+            databaseManager.initializeSchema();
+            ScanPersistenceService persistenceService =
+                    new ScanPersistenceService(databaseManager);
             BaselineManager baselineManager = new BaselineManager();
             String command = args.length == 0 ? "scan" : args[0].toLowerCase();
 
@@ -30,6 +38,7 @@ public class Main {
             if (command.equals("init")) {
                 baselineManager.createBaseline(monitoredFolder);
                 baselineManager.saveBaselineToFile(baselineFile);
+                persistInitialScan(monitoredFolder, baselineManager, persistenceService);
                 System.out.println("BASELINE CREATED SUCCESSFULLY");
                 System.out.println("Files recorded: " + baselineManager.getBaselineEntries().size());
                 System.out.println("Run the application again to scan for changes.");
@@ -44,6 +53,7 @@ public class Main {
             if (!Files.exists(baselineFile)) {
                 baselineManager.createBaseline(monitoredFolder);
                 baselineManager.saveBaselineToFile(baselineFile);
+                persistInitialScan(monitoredFolder, baselineManager, persistenceService);
                 System.out.println("No baseline was found. A new baseline has been created.");
                 System.out.println("Change or add a file in the monitored folder, then run again.");
                 return;
@@ -57,11 +67,21 @@ public class Main {
             DirectoryScanner scanner = new DirectoryScanner();
             ScanReport report = scanner.scan(monitoredFolder,
                     baselineManager.getBaselineEntries());
+            persistenceService.persist(monitoredFolder, report);
             printReport(report);
 
         } catch (Exception exception) {
             System.err.println("ERROR: " + exception.getMessage());
         }
+    }
+
+    private static void persistInitialScan(
+            Path monitoredFolder,
+            BaselineManager baselineManager,
+            ScanPersistenceService persistenceService) throws IOException, SQLException {
+        ScanReport report = new DirectoryScanner().scan(
+                monitoredFolder, baselineManager.getBaselineEntries());
+        persistenceService.persist(monitoredFolder, report);
     }
 
     private static void printReport(ScanReport report) {

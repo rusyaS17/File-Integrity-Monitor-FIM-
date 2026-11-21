@@ -16,6 +16,10 @@ public class IntegrityChecker {
 
         String currentHash = hashCalculator.calculateSHA256(filePath);
 
+        return isHashModified(currentHash, originalHash);
+    }
+
+    public boolean isHashModified(String currentHash, String originalHash) {
         return !currentHash.equals(originalHash);
     }
 

@@ -14,11 +14,13 @@ public final class ApplicationConfiguration {
     private final Path applicationDirectory;
     private final Path monitoredDirectory;
     private final Path baselineFile;
+    private final Path databaseFile;
 
     private ApplicationConfiguration(Path applicationDirectory) {
         this.applicationDirectory = applicationDirectory.toAbsolutePath().normalize();
         this.monitoredDirectory = this.applicationDirectory.resolve("monitored").normalize();
         this.baselineFile = this.applicationDirectory.resolve("baseline.txt").normalize();
+        this.databaseFile = this.applicationDirectory.resolve("fim.db").normalize();
     }
 
     public static ApplicationConfiguration forDirectory(Path directory) {
@@ -63,6 +65,10 @@ public final class ApplicationConfiguration {
 
     public Path baselineFile() {
         return baselineFile;
+    }
+
+    public Path databaseFile() {
+        return databaseFile;
     }
 
     private static Path findProjectDirectory(Path start) {

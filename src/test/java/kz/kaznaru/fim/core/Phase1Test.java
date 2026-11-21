@@ -30,6 +30,8 @@ class Phase1Test {
                 configuration.monitoredDirectory());
         assertEquals(temporaryDirectory.resolve("baseline.txt").normalize(),
                 configuration.baselineFile());
+        assertEquals(temporaryDirectory.resolve("fim.db").normalize(),
+                configuration.databaseFile());
     }
 
     @Test
@@ -265,22 +267,18 @@ class Phase1Test {
 
         assertEquals(1, report.count(FileStatus.SAFE));
         assertEquals(1, report.count(FileStatus.NEW));
-        assertTrue(checker.isFileModifiedCalled);
+        assertTrue(checker.hashComparisonCalled);
         assertTrue(checker.getCurrentHashCalled);
     }
 
     private static final class TrackingIntegrityChecker extends IntegrityChecker {
-        private boolean isFileModifiedCalled;
+        private boolean hashComparisonCalled;
         private boolean getCurrentHashCalled;
 
         @Override
-        public boolean isFileModified(Path filePath, String originalHash) {
-            isFileModifiedCalled = true;
-            try {
-                return !getCurrentHash(filePath).equals(originalHash);
-            } catch (java.io.IOException exception) {
-                throw new IllegalStateException(exception);
-            }
+        public boolean isHashModified(String currentHash, String originalHash) {
+            hashComparisonCalled = true;
+            return super.isHashModified(currentHash, originalHash);
         }
 
         @Override

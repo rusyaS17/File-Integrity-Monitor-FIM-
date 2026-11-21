@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -268,8 +268,8 @@ public class BaselineManager {
 
     private static final class TemporaryFile implements AutoCloseable {
 
-        private static final int CLEANUP_ATTEMPTS = 5;
-        private static final long RETRY_DELAY_MILLIS = 40;
+        private static final int CLEANUP_ATTEMPTS = 10;
+        private static final long RETRY_DELAY_MILLIS = 50;
 
         private final Path path;
 
@@ -292,7 +292,7 @@ public class BaselineManager {
                 try {
                     Files.deleteIfExists(path);
                     return;
-                } catch (AccessDeniedException exception) {
+                } catch (FileSystemException exception) {
                     if (attempt == CLEANUP_ATTEMPTS) {
                         throw exception;
                     }

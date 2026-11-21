@@ -45,20 +45,20 @@ public class DirectoryScanner {
                 String originalHash = baseline.get(key);
 
                 try {
+                    String currentHash = integrityChecker.getCurrentHash(path);
                     if (originalHash == null) {
-                        integrityChecker.getCurrentHash(path);
                         results.add(new FileScanResult(path, FileStatus.NEW,
-                                "File is not present in the baseline"));
-                    } else if (!integrityChecker.isFileModified(path, originalHash)) {
+                                "File is not present in the baseline", currentHash));
+                    } else if (!integrityChecker.isHashModified(currentHash, originalHash)) {
                         results.add(new FileScanResult(path, FileStatus.SAFE,
-                                "SHA-256 matches the baseline"));
+                                "SHA-256 matches the baseline", currentHash, originalHash));
                     } else {
                         results.add(new FileScanResult(path, FileStatus.MODIFIED,
-                                "SHA-256 does not match the baseline"));
+                                "SHA-256 does not match the baseline", currentHash, originalHash));
                     }
                 } catch (IOException exception) {
                     results.add(new FileScanResult(path, FileStatus.ERROR,
-                            exception.getMessage()));
+                            exception.getMessage(), null, originalHash));
                 }
             }
         }
@@ -66,7 +66,7 @@ public class DirectoryScanner {
         for (String baselinePath : baseline.keySet()) {
             if (!foundPaths.contains(baselinePath)) {
                 results.add(new FileScanResult(Path.of(baselinePath), FileStatus.DELETED,
-                        "File from the baseline was not found"));
+                        "File from the baseline was not found", null, baseline.get(baselinePath)));
             }
         }
 
