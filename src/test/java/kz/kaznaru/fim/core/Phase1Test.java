@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -286,6 +287,145 @@ class Phase1Test {
         assertEquals(1, report.count(FileStatus.NEW));
         assertTrue(checker.hashComparisonCalled);
         assertTrue(checker.getCurrentHashCalled);
+    }
+
+    @Test
+    void preparesAnEmptyBaselineSnapshotForAnEmptyDirectory() throws Exception {
+        Path monitored = Files.createDirectory(temporaryDirectory.resolve("monitored"));
+
+        BaselineSnapshot snapshot = new BaselineManager().prepareBaseline(monitored);
+
+        assertEquals(monitored.toAbsolutePath().normalize(), snapshot.monitoredRoot());
+        assertTrue(snapshot.entries().isEmpty());
+        assertEquals(0, snapshot.entryCount());
+        assertFalse(Files.exists(temporaryDirectory.resolve("baseline.txt")));
+        assertFalse(Files.exists(temporaryDirectory.resolve("baseline.txt.bak")));
+    }
+
+    @Test
+    void preparesCorrectHashesForFilesRecursively() throws Exception {
+        Path monitored = Files.createDirectory(temporaryDirectory.resolve("monitored"));
+        Path topLevelFile = monitored.resolve("top.txt");
+        Path nestedDirectory = Files.createDirectory(monitored.resolve("nested"));
+        Path nestedFile = nestedDirectory.resolve("nested.txt");
+        Files.writeString(topLevelFile, "top-level");
+        Files.writeString(nestedFile, "nested");
+
+        BaselineSnapshot snapshot = new BaselineManager().prepareBaseline(monitored);
+
+        HashCalculator hashCalculator = new HashCalculator();
+        assertEquals(2, snapshot.entryCount());
+        assertEquals(hashCalculator.calculateSHA256(topLevelFile),
+                snapshot.entries().get(topLevelFile.toAbsolutePath().normalize().toString()));
+        assertEquals(hashCalculator.calculateSHA256(nestedFile),
+                snapshot.entries().get(nestedFile.toAbsolutePath().normalize().toString()));
+    }
+
+    @Test
+    void baselineSnapshotDefensivelyCopiesAndValidatesEntries() throws Exception {
+        Path monitored = temporaryDirectory.resolve("monitored").toAbsolutePath().normalize();
+        Path file = monitored.resolve("sample.txt");
+        java.util.HashMap<String, String> mutableEntries = new java.util.HashMap<>();
+        mutableEntries.put(file.toString(),
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+
+        BaselineSnapshot snapshot = new BaselineSnapshot(monitored, mutableEntries);
+        mutableEntries.clear();
+
+        assertEquals(1, snapshot.entryCount());
+        assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.entries().put(file.toString(),
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new BaselineSnapshot(monitored, Map.of(file.toString(), "not-a-hash")));
+        assertThrows(IllegalArgumentException.class,
+                () -> new BaselineSnapshot(monitored, Map.of(
+                        temporaryDirectory.resolve("outside.txt").toString(),
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")));
+    }
+
+    @Test
+    void preparationRejectsMissingAndNonDirectoryRoots() throws Exception {
+        BaselineManager manager = new BaselineManager();
+        Path missing = temporaryDirectory.resolve("missing");
+        Path file = temporaryDirectory.resolve("not-a-directory.txt");
+        Files.writeString(file, "data");
+
+        assertThrows(IOException.class, () -> manager.prepareBaseline(missing));
+        assertThrows(IOException.class, () -> manager.prepareBaseline(file));
+    }
+
+    @Test
+    void successfulPreparationDoesNotChangeActiveBaselineOrBaselineFiles()
+            throws Exception {
+        Path monitored = Files.createDirectory(temporaryDirectory.resolve("monitored"));
+        Path sample = monitored.resolve("sample.txt");
+        Path baselineFile = temporaryDirectory.resolve("baseline.txt");
+        Path backupFile = temporaryDirectory.resolve("baseline.txt.bak");
+        Files.writeString(sample, "initial");
+
+        BaselineManager manager = new BaselineManager();
+        manager.createBaseline(monitored);
+        manager.saveBaselineToFile(baselineFile);
+        Files.writeString(sample, "saved version");
+        manager.createBaseline(monitored);
+        manager.saveBaselineToFile(baselineFile);
+        Map<String, String> activeEntries = manager.getBaselineEntries();
+        byte[] baselineBefore = Files.readAllBytes(baselineFile);
+        byte[] backupBefore = Files.readAllBytes(backupFile);
+
+        Files.writeString(sample, "candidate version");
+        BaselineSnapshot candidate = manager.prepareBaseline(monitored);
+
+        assertEquals(new HashCalculator().calculateSHA256(sample),
+                candidate.entries().get(sample.toAbsolutePath().normalize().toString()));
+        assertEquals(activeEntries, manager.getBaselineEntries());
+        assertArrayEquals(baselineBefore, Files.readAllBytes(baselineFile));
+        assertArrayEquals(backupBefore, Files.readAllBytes(backupFile));
+    }
+
+    @Test
+    void hashFailureDuringPreparationPreservesActiveBaselineAndBothFiles()
+            throws Exception {
+        Path monitored = Files.createDirectory(temporaryDirectory.resolve("monitored"));
+        Path sample = monitored.resolve("sample.txt");
+        Path baselineFile = temporaryDirectory.resolve("baseline.txt");
+        Path backupFile = temporaryDirectory.resolve("baseline.txt.bak");
+        Files.writeString(sample, "initial");
+
+        BaselineManager manager = new BaselineManager(new FailingHashCalculator("failure.txt"));
+        manager.createBaseline(monitored);
+        manager.saveBaselineToFile(baselineFile);
+        Files.writeString(sample, "saved version");
+        manager.createBaseline(monitored);
+        manager.saveBaselineToFile(baselineFile);
+        Map<String, String> activeEntries = manager.getBaselineEntries();
+        byte[] baselineBefore = Files.readAllBytes(baselineFile);
+        byte[] backupBefore = Files.readAllBytes(backupFile);
+        Files.writeString(monitored.resolve("failure.txt"), "trigger hash failure");
+
+        assertThrows(IOException.class, () -> manager.prepareBaseline(monitored));
+
+        assertEquals(activeEntries, manager.getBaselineEntries());
+        assertArrayEquals(baselineBefore, Files.readAllBytes(baselineFile));
+        assertArrayEquals(backupBefore, Files.readAllBytes(backupFile));
+    }
+
+    private static final class FailingHashCalculator extends HashCalculator {
+
+        private final String failingFileName;
+
+        private FailingHashCalculator(String failingFileName) {
+            this.failingFileName = failingFileName;
+        }
+
+        @Override
+        public String calculateSHA256(Path filePath) throws IOException {
+            if (filePath.getFileName().toString().equals(failingFileName)) {
+                throw new IOException("Injected hash read failure");
+            }
+            return super.calculateSHA256(filePath);
+        }
     }
 
     private static final class TrackingIntegrityChecker extends IntegrityChecker {

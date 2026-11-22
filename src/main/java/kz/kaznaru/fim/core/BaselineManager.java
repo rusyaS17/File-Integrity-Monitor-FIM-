@@ -1,6 +1,7 @@
 package kz.kaznaru.fim.core;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -11,10 +12,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 /** Stores the trusted SHA-256 values (baseline) for monitored files. */
@@ -29,7 +33,11 @@ public class BaselineManager {
     private boolean recoveredFromBackup;
 
     public BaselineManager() {
-        this.hashCalculator = new HashCalculator();
+        this(new HashCalculator());
+    }
+
+    BaselineManager(HashCalculator hashCalculator) {
+        this.hashCalculator = Objects.requireNonNull(hashCalculator, "hashCalculator");
         this.baseline = new LinkedHashMap<>();
         this.baselineRoot = null;
         this.recoveredFromBackup = false;
@@ -50,6 +58,30 @@ public class BaselineManager {
             }
         }
         recoveredFromBackup = false;
+    }
+
+    /**
+     * Builds a candidate snapshot without changing this manager or writing baseline files.
+     */
+    public BaselineSnapshot prepareBaseline(Path directory) throws IOException {
+        Objects.requireNonNull(directory, "directory");
+        Path normalizedRoot = directory.toAbsolutePath().normalize();
+        if (!Files.isDirectory(normalizedRoot)) {
+            throw new IOException("Monitored folder does not exist: " + normalizedRoot);
+        }
+
+        Map<String, String> candidateEntries = new LinkedHashMap<>();
+        try (Stream<Path> paths = Files.walk(normalizedRoot)) {
+            for (Path path : paths.toList()) {
+                if (Files.readAttributes(path, BasicFileAttributes.class).isRegularFile()) {
+                    candidateEntries.put(
+                            normalize(path), hashCalculator.calculateSHA256(path));
+                }
+            }
+        } catch (UncheckedIOException exception) {
+            throw exception.getCause();
+        }
+        return new BaselineSnapshot(normalizedRoot, candidateEntries);
     }
 
     /** Saves paths and hashes atomically, retaining a backup of the previous baseline. */
@@ -209,12 +241,22 @@ public class BaselineManager {
     }
 
     private String serializeBaseline() {
+        return serializeEntries(baselineRoot, baseline);
+    }
+
+    static byte[] serializeSnapshot(BaselineSnapshot snapshot) {
+        Map<String, String> sortedEntries = new TreeMap<>(snapshot.entries());
+        return serializeEntries(snapshot.monitoredRoot(), sortedEntries)
+                .getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String serializeEntries(Path root, Map<String, String> entries) {
         StringBuilder data = new StringBuilder();
         data.append(VERSION_HEADER).append(System.lineSeparator());
         Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
-        for (Map.Entry<String, String> entry : baseline.entrySet()) {
-            if (baselineRoot == null) {
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            if (root == null) {
                 throw new IllegalStateException(
                         "Baseline root is not set. Call createBaseline or loadBaselineFromFile first.");
             }

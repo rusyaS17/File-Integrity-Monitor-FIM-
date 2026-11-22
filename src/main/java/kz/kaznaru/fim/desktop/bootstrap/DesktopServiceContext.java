@@ -10,6 +10,7 @@ import kz.kaznaru.fim.application.EventProcessor;
 import kz.kaznaru.fim.application.MonitoringService;
 import kz.kaznaru.fim.application.RootUpdatedEvent;
 import kz.kaznaru.fim.application.ScanPersistenceService;
+import kz.kaznaru.fim.core.BaselineFileTransaction;
 import kz.kaznaru.fim.core.BaselineManager;
 import kz.kaznaru.fim.core.DirectoryScanner;
 import kz.kaznaru.fim.database.DatabaseManager;
@@ -47,6 +48,18 @@ public final class DesktopServiceContext implements AutoCloseable {
             throws IOException, SQLException {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
         Files.createDirectories(configuration.monitoredDirectory());
+
+        BaselineFileTransaction transaction = new BaselineFileTransaction();
+        BaselineFileTransaction.RecoveryInspection recovery =
+                transaction.inspectRecovery(configuration.baselineFile());
+        if (recovery.status() != BaselineFileTransaction.RecoveryStatus.NONE) {
+            throw new IOException("Unfinished baseline transaction detected ("
+                    + recovery.status() + "). " + recovery.detail()
+                    + " Journal: " + recovery.journalFile()
+                    + "; artifacts: " + recovery.artifacts()
+                    + ". Preserve these files and invoke BaselineFileTransaction.recover() "
+                    + "explicitly before restarting.");
+        }
 
         DatabaseManager initializedDatabaseManager =
                 new DatabaseManager(configuration.databaseFile());
