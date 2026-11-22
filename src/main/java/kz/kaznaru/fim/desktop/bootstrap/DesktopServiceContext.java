@@ -1,6 +1,8 @@
 package kz.kaznaru.fim.desktop.bootstrap;
 
 import kz.kaznaru.fim.application.ApplicationConfiguration;
+import kz.kaznaru.fim.application.BaselineStatus;
+import kz.kaznaru.fim.application.BaselineStatusQueryService;
 import kz.kaznaru.fim.application.BackgroundTaskService;
 import kz.kaznaru.fim.application.DashboardQueryService;
 import kz.kaznaru.fim.application.DashboardSnapshot;
@@ -28,6 +30,7 @@ public final class DesktopServiceContext implements AutoCloseable {
     private final ApplicationConfiguration configuration;
     private final DatabaseManager databaseManager;
     private final BaselineManager baselineManager;
+    private final BaselineStatusQueryService baselineStatusQueryService;
     private final DirectoryScanner directoryScanner;
     private final ScanPersistenceService persistenceService;
     private final DashboardQueryService dashboardQueryService;
@@ -54,6 +57,8 @@ public final class DesktopServiceContext implements AutoCloseable {
             initializedBaselineManager.loadBaselineFromFile(
                     configuration.baselineFile(), configuration.monitoredDirectory());
         }
+        BaselineStatusQueryService initializedBaselineStatusQueryService =
+                new BaselineStatusQueryService(configuration, initializedBaselineManager);
 
         DirectoryScanner initializedDirectoryScanner = new DirectoryScanner();
         ScanPersistenceService initializedPersistenceService =
@@ -75,6 +80,7 @@ public final class DesktopServiceContext implements AutoCloseable {
 
         databaseManager = initializedDatabaseManager;
         baselineManager = initializedBaselineManager;
+        baselineStatusQueryService = initializedBaselineStatusQueryService;
         directoryScanner = initializedDirectoryScanner;
         persistenceService = initializedPersistenceService;
         dashboardQueryService = initializedDashboardQueryService;
@@ -93,6 +99,15 @@ public final class DesktopServiceContext implements AutoCloseable {
 
     public BaselineManager baselineManager() {
         return baselineManager;
+    }
+
+    public BaselineStatusQueryService baselineStatusQueryService() {
+        return baselineStatusQueryService;
+    }
+
+    public BaselineStatus baselineStatus() {
+        ensureOpen();
+        return baselineStatusQueryService.query();
     }
 
     public DirectoryScanner directoryScanner() {

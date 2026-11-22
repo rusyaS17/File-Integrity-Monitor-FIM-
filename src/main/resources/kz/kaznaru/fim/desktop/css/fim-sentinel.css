@@ -623,3 +623,53 @@
     -fx-background-color: #3D2429;
     -fx-text-fill: #FF858D;
 }
+
+.baseline-status-panel,
+.baseline-details-panel {
+    -fx-max-width: 1100;
+}
+
+.baseline-status-badge {
+    -fx-background-radius: 6;
+    -fx-font-family: "Consolas";
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 7 11;
+}
+
+.baseline-status-loading {
+    -fx-background-color: #202A2F;
+    -fx-text-fill: #A8B5B8;
+}
+
+.baseline-status-not-created {
+    -fx-background-color: #3D3020;
+    -fx-text-fill: #FFC06A;
+}
+
+.baseline-status-active {
+    -fx-background-color: #203522;
+    -fx-text-fill: #B5F577;
+}
+
+.baseline-status-recovered {
+    -fx-background-color: #19333B;
+    -fx-text-fill: #65E2F3;
+}
+
+.baseline-data-value {
+    -fx-text-fill: #D6E4E2;
+    -fx-font-size: 12px;
+}
+
+.baseline-entry-count {
+    -fx-font-size: 26px;
+}
+
+.baseline-recovery-info {
+    -fx-background-color: rgba(25, 51, 59, 0.62);
+    -fx-background-radius: 7;
+    -fx-padding: 10 12;
+    -fx-text-fill: #65E2F3;
+    -fx-font-size: 11px;
+}
