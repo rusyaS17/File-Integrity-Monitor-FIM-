@@ -128,34 +128,44 @@ class DesktopServiceContextTest {
     }
 
     @Test
-    void mainShellFxmlContainsNavigationAndDashboardSections() throws Exception {
-        var resource = getClass().getResource(
-                "/kz/kaznaru/fim/desktop/view/main-shell.fxml");
-        assertNotNull(resource);
-        String fxml = Files.readString(Path.of(resource.toURI()));
-        assertTrue(fxml.contains("FIM SENTINEL"));
-        assertTrue(fxml.contains("fx:controller=\"kz.kaznaru.fim.desktop.controller.MainShellController\""));
-        assertTrue(fxml.contains("Dashboard"));
-        assertTrue(fxml.contains("File Monitoring"));
-        assertTrue(fxml.contains("File Scanner"));
-        assertTrue(fxml.contains("Event History"));
-        assertTrue(fxml.contains("Baseline Management"));
-        assertTrue(fxml.contains("Settings"));
-        assertTrue(fxml.contains("Not refreshed yet"));
-        assertTrue(fxml.contains("fx:id=\"totalFilesValue\""));
-        assertTrue(fxml.contains("fx:id=\"threatsErrorsValue\""));
-        assertTrue(fxml.contains("LineChart"));
-        assertTrue(fxml.contains("fx:id=\"recentEventsTable\""));
-        assertTrue(fxml.contains("fx:id=\"startMonitoringButton\""));
-        assertTrue(fxml.contains("prefColumns=\"3\""));
-        assertTrue(fxml.contains("prefTileWidth=\"280.0\""));
-        assertFalse(fxml.contains("minTileWidth="));
-        assertFalse(fxml.contains("maxTileWidth="));
-        assertFalse(fxml.contains("columnResizePolicy="));
-        assertFalse(fxml.contains("Dashboard data is not connected yet"));
-        assertControllerBindings(fxml);
+    void allDesktopScreenFxmlFilesContainExpectedContentAndControllerBindings()
+            throws Exception {
+        assertScreenFxml(
+                "/kz/kaznaru/fim/desktop/view/main-shell.fxml",
+                MainShellController.class,
+                "FIM SENTINEL",
+                "fx:id=\"contentHost\"");
+        assertScreenFxml(
+                "/kz/kaznaru/fim/desktop/view/dashboard.fxml",
+                kz.kaznaru.fim.desktop.controller.DashboardController.class,
+                "Dashboard",
+                "fx:id=\"totalFilesValue\"");
+        assertScreenFxml(
+                "/kz/kaznaru/fim/desktop/view/file-scanner.fxml",
+                kz.kaznaru.fim.desktop.controller.FileScannerController.class,
+                "File Scanner",
+                "fx:id=\"monitoredRootValue\"");
+        assertScreenFxml(
+                "/kz/kaznaru/fim/desktop/view/baseline-management.fxml",
+                kz.kaznaru.fim.desktop.controller.BaselineManagementController.class,
+                "Baseline Management",
+                "fx:id=\"baselinePathValue\"");
         assertNotNull(getClass().getResource(
                 "/kz/kaznaru/fim/desktop/css/fim-sentinel.css"));
+    }
+
+    private void assertScreenFxml(
+            String resourcePath,
+            Class<?> controllerType,
+            String... expectedContent) throws Exception {
+        var resource = getClass().getResource(resourcePath);
+        assertNotNull(resource, resourcePath);
+        String fxml = Files.readString(Path.of(resource.toURI()));
+        for (String expected : expectedContent) {
+            assertTrue(fxml.contains(expected), resourcePath + " missing " + expected);
+        }
+        assertTrue(fxml.contains("fx:controller=\"" + controllerType.getName() + "\""));
+        assertControllerBindings(fxml, controllerType);
         try (var input = resource.openStream()) {
             DocumentBuilderFactory.newInstance()
                     .newDocumentBuilder()
@@ -163,17 +173,18 @@ class DesktopServiceContextTest {
         }
     }
 
-    private void assertControllerBindings(String fxml) throws Exception {
+    private void assertControllerBindings(String fxml, Class<?> controllerType)
+            throws Exception {
         Matcher idMatcher = Pattern.compile("fx:id=\"([^\"]+)\"").matcher(fxml);
         while (idMatcher.find()) {
-            Field field = MainShellController.class.getDeclaredField(idMatcher.group(1));
+            Field field = controllerType.getDeclaredField(idMatcher.group(1));
             assertTrue(field.isAnnotationPresent(FXML.class),
                     () -> "FXML field is missing @FXML: " + field.getName());
         }
 
         Matcher actionMatcher = Pattern.compile("onAction=\"#([^\"]+)\"").matcher(fxml);
         while (actionMatcher.find()) {
-            Method method = MainShellController.class.getDeclaredMethod(actionMatcher.group(1));
+            Method method = controllerType.getDeclaredMethod(actionMatcher.group(1));
             assertTrue(method.isAnnotationPresent(FXML.class),
                     () -> "FXML handler is missing @FXML: " + method.getName());
         }

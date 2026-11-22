@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="18.0" styleClass="screen-content"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="kz.kaznaru.fim.desktop.controller.FileScannerController">
+    <padding>
+        <Insets top="36.0" right="40.0" bottom="40.0" left="40.0"/>
+    </padding>
+    <children>
+        <Label text="FILE OPERATIONS" styleClass="page-eyebrow"/>
+        <Label text="File Scanner" styleClass="page-title"/>
+        <VBox spacing="12.0" styleClass="dashboard-panel screen-scaffold-panel">
+            <Label text="Configured monitored root" styleClass="panel-caption"/>
+            <Label fx:id="monitoredRootValue"
+                   text="Loading configured path..."
+                   wrapText="true" styleClass="path-value"/>
+            <Label text="Scanner controls and scan results are not part of this navigation phase."
+                   wrapText="true" styleClass="page-subtitle"/>
+        </VBox>
+    </children>
+</VBox>

@@ -4,9 +4,9 @@ package kz.kaznaru.fim.desktop.navigation;
 public enum NavigationDestination {
     DASHBOARD("Dashboard", true),
     FILE_MONITORING("File Monitoring", false),
-    FILE_SCANNER("File Scanner", false),
+    FILE_SCANNER("File Scanner", true),
     EVENT_HISTORY("Event History", false),
-    BASELINE_MANAGEMENT("Baseline Management", false),
+    BASELINE_MANAGEMENT("Baseline Management", true),
     SETTINGS("Settings", false);
 
     private final String label;

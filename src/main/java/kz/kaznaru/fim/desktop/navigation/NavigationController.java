@@ -6,17 +6,28 @@ import javafx.scene.control.Button;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Applies navigation state to the shell's JavaFX buttons. */
 public final class NavigationController {
 
     private final NavigationState state;
     private final Map<NavigationDestination, Button> buttons;
+    private final Consumer<NavigationDestination> navigationHandler;
 
     public NavigationController(
             NavigationState state,
             Map<NavigationDestination, Button> buttons) {
+        this(state, buttons, destination -> { });
+    }
+
+    public NavigationController(
+            NavigationState state,
+            Map<NavigationDestination, Button> buttons,
+            Consumer<NavigationDestination> navigationHandler) {
         this.state = Objects.requireNonNull(state, "state");
+        this.navigationHandler = Objects.requireNonNull(
+                navigationHandler, "navigationHandler");
         Objects.requireNonNull(buttons, "buttons");
         EnumMap<NavigationDestination, Button> copiedButtons =
                 new EnumMap<>(NavigationDestination.class);
@@ -43,8 +54,14 @@ public final class NavigationController {
     }
 
     public void activate(NavigationDestination destination) {
+        Objects.requireNonNull(destination, "destination");
+        navigationHandler.accept(destination);
         state.activate(destination);
         updateActiveButton();
+    }
+
+    public NavigationState state() {
+        return state;
     }
 
     private void updateActiveButton() {
